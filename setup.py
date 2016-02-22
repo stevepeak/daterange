@@ -25,5 +25,5 @@ setup(name='timestring',
       packages=['timestring'],
       include_package_data=True,
       zip_safe=True,
-      install_requires=["pytz==2013b"],
+      install_requires=["pytz>=2013b"],
       entry_points={'console_scripts': ['timestring=timestring:main']})
