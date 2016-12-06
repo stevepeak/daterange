@@ -119,6 +119,12 @@ class timestringTests(unittest.TestCase):
         self.assertEqual(Range('january')[1].month, 2)
         self.assertEqual(Range('january')[1].day, 1)
         self.assertEqual(Range('january')[1].hour, 0)
+        self.assertEqual(Range('December')[0].month, 12)
+        self.assertEqual(Range('December')[0].day, 1)
+        self.assertEqual(Range('December')[0].hour, 0)
+        self.assertEqual(Range('December')[1].month, 1)
+        self.assertEqual(Range('December')[1].day, 1)
+        self.assertEqual(Range('December')[1].hour, 0)
         self.assertEqual(Range('2010')[0].year, 2010)
         self.assertEqual(Range('2010')[0].month, 1)
         self.assertEqual(Range('2010')[0].day, 1)
@@ -309,7 +315,7 @@ class timestringTests(unittest.TestCase):
         self.assertEqual(year.end.hour, 0)
         self.assertEqual(year.end.minute, 0)
         self.assertTrue(Date('today') in year)
-        
+
         self.assertTrue(Date('last tuesday') in Range('8 days'))
         self.assertTrue(Date('monday') in Range('8 days'))
         self.assertTrue(Date('last fri') in Range('8 days'))
