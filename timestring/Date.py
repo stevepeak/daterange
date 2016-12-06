@@ -322,8 +322,7 @@ class Date(object):
                             new.date = new.date + timedelta(days=(365 * i))
                     elif delta.startswith('month'):
                         if (new.date.month + i) > 12:
-                            new.date = new.date.replace(month=(i - (i / 12)),
-                                                        year=(new.date.year + 1 + (i / 12)))
+                            new.date = new.date.replace(month=1, year=(new.date.year + 1))
                         elif (new.date.month + i) < 1:
                             new.date = new.date.replace(month=12, year=(new.date.year - 1))
                         else:
@@ -455,7 +454,7 @@ class Date(object):
 
     def __ne__(self, other):
         return not self.__eq__(other)
-        
+
     def format(self, format_string='%x %X'):
         if self.date != 'infinity':
             return self.date.strftime(format_string)
