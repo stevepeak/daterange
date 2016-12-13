@@ -177,7 +177,7 @@ class Date(object):
                 # !hour
                 hour = [date.get(key) for key in ('hour', 'hour_2', 'hour_3') if date.get(key)]
                 if hour:
-                    new_date = new_date.replace(hour=int(max(hour)))
+                    new_date = new_date.replace(hour=int(max(hour)), minute=0, second=0)
                     am = [date.get(key) for key in ('am', 'am_1') if date.get(key)]
                     if am and max(am) in ('p', 'pm'):
                         h = int(max(hour))
