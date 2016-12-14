@@ -114,7 +114,7 @@ class Range(object):
                         end = start + di
 
                     #next          x [      ]
-                    elif group['ref'] == 'next':
+                    elif group['ref'] == 'next' or group['ref'] == 'upcoming':
                         if int(group['num'] or 1) > 1:
                             di = "%s %s" % (str(int(group['num'] or 1)), delta)
                         end = start + di

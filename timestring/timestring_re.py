@@ -9,7 +9,7 @@ TIMESTRING_RE = re.compile(re.sub('[\t\n\s]', '', re.sub('(\(\?\#[^\)]+\))', '',
 
             (
                 (
-                    ((?P<ref>next|last|prev(ious)?|this)\s+)?
+                    ((?P<ref>next|upcoming|last|prev(ious)?|this)\s+)?
                     (?P<main>
                         (?# =-=-=-= Matches:: number-frame-ago?, "4 weeks", "sixty days ago" =-=-=-= )
                         (

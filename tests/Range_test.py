@@ -21,7 +21,9 @@ input_list = [
 	'last 24 months',
 	'last 16 months',
 	'next 2 days',
-	'tomorrow'
+	'tomorrow',
+	'upcoming week',
+	'upcoming month'
  ]
 
 for text in input_list:
