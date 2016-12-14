@@ -132,7 +132,7 @@ class Date(object):
                     iso = dict(monday=1, tuesday=2, wednesday=3, thursday=4, friday=5, saturday=6, sunday=7, mon=1, tue=2, tues=2, wed=3, wedn=3, thu=4, thur=4, fri=5, sat=6, sun=7).get(dow)
                     if iso:
                         # determin which direction
-                        if date.get('ref') not in ('this', 'next'):
+                        if date.get('ref') not in ('this', 'next', 'upcoming'):
                             days = iso - new_date.isoweekday() - (7 if iso >= new_date.isoweekday() else 0)
                         else:
                             days = iso - new_date.isoweekday() + (7 if iso < new_date.isoweekday() else 0)
