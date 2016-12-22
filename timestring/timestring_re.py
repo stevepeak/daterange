@@ -28,11 +28,18 @@ TIMESTRING_RE = re.compile(re.sub('[\t\n\s]', '', re.sub('(\(\?\#[^\)]+\))', '',
 
                         |
 
-                        (?# =-=-=-= Matches Y-M-D, M-D-Y ex. "january 5, 2012", "january 5th, '12", "jan 5th 2012" =-=-=-= )
+                        (?# =-=-=-= Matches Y-M-D, M-D-Y, D-M-Y, Y-D-M ex. "january 5, 2012", "january 5th, '12", "jan 5th 2012", "5 December, 2016" =-=-=-= )
                         (
                             ((?P<year_6>(([12][089]\d{2})|('\d{2})))?([\/\-\s]+)?)
-                            (?P<month>january|february|march|april|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec)[\/\-\s]
-                            ((?P<date>(\d{1,2})(?!\d))(th|nd|st|rd)?)
+                            (
+                                ((?P<date_4>(\d{1,2})(?!\d))(th|nd|st|rd)?([\/\-\s]+)?)
+                                (?P<month_5>january|february|march|april|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec)[\/\-\s]?
+                            )
+                            |
+                            (
+                                (?P<month>january|february|march|april|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec)[\/\-\s]?
+                                ((?P<date>(\d{1,2})(?!\d))(th|nd|st|rd)?)
+                            )
                             (,?\s(?P<year>([12][089]|')?\d{2}))?
                         )
 
