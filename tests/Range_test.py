@@ -5,8 +5,9 @@ from timestring import Range
 #Todo- assert the tests in next commit
 
 input_list = [
-	"December",
-	"2016 25 December",
+	'December',
+	'January 2017',
+	'2016 25 December',
 	'25 December',
 	'December 25th',
 	'from january 10th 2010 to jan 20th 2010',
