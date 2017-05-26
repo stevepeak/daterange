@@ -132,7 +132,10 @@ class Date(object):
                     iso = dict(monday=1, tuesday=2, wednesday=3, thursday=4, friday=5, saturday=6, sunday=7, mon=1, tue=2, tues=2, wed=3, wedn=3, thu=4, thur=4, fri=5, sat=6, sun=7).get(dow)
                     if iso:
                         # determin which direction
-                        if date.get('ref') not in ('this', 'next', 'upcoming'):
+                        ref =  date.get('ref')
+                        if ref in ['next', 'upcoming']:
+                            days = iso - new_date.isoweekday() + (7 if iso <= new_date.isoweekday() else 0)
+                        elif ref in ['last', 'previous', 'prev']:
                             days = iso - new_date.isoweekday() - (7 if iso >= new_date.isoweekday() else 0)
                         else:
                             days = iso - new_date.isoweekday() + (7 if iso < new_date.isoweekday() else 0)
@@ -143,6 +146,10 @@ class Date(object):
                         new_date = new_date - timedelta(days=1)
                     elif dow == 'tomorrow':
                         new_date = new_date + timedelta(days=1)
+                    elif dow == 'day after tomorrow':
+                        new_date = new_date + timedelta(days=2)
+                    elif dow == 'day before yesterday':
+                        new_date = new_date - timedelta(days=2)
 
                 # !year
                 year = [int(CLEAN_NUMBER.sub('', date[key])) for key in ('year', 'year_2', 'year_3', 'year_4', 'year_5', 'year_6') if date.get(key)]

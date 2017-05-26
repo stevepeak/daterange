@@ -124,7 +124,6 @@ class Range(object):
                         #if group['ref'] == 'last' and int(group['num'] or 1) == 1:
                         #    start = start - ('1 ' + delta)
                         end = start - di
-                        print("last, di, ", start, end, di)
 
                     # last & no ref   [    x]
                     else:
