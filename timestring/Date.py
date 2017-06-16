@@ -58,20 +58,6 @@ class Date(object):
             if isinstance(date, dict):
                 # Initial date.
                 new_date = get_timezone_time(tz)#datetime(*time.localtime()[:3])
-                # new_date = new_date.replace(hour=0, minute=0, second=0)
-                # if tz and tz.zone != "UTC":
-                #     #
-                #     # The purpose here is to adjust what day it is based on the timezeone
-                #     #
-                #     ts = datetime.now()
-                #     # Daylight savings === second Sunday in March and reverts to standard time on the first Sunday in November
-                #     # Monday is 0 and Sunday is 6.
-                #     # 14 days - dst_start.weekday()
-                #     dst_start = datetime(ts.year, 3, 1, 2, 0, 0) + timedelta(13 - datetime(ts.year, 3, 1).weekday())
-                #     dst_end = datetime(ts.year, 11, 1, 2, 0, 0) + timedelta(6 - datetime(ts.year, 11, 1).weekday())
-
-                #     ts = ts + tz.utcoffset(new_date, is_dst=(dst_start < ts < dst_end))
-                #     new_date = datetime(ts.year, ts.month, ts.day)
 
                 if date.get('unixtime'):
                     new_date = datetime.fromtimestamp(int(date.get('unixtime')))
@@ -141,15 +127,16 @@ class Date(object):
                             days = iso - new_date.isoweekday() + (7 if iso < new_date.isoweekday() else 0)
 
                         new_date = new_date + timedelta(days=days)
-
-                    elif dow == 'yesterday':
-                        new_date = new_date - timedelta(days=1)
-                    elif dow == 'tomorrow':
-                        new_date = new_date + timedelta(days=1)
-                    elif dow == 'day after tomorrow':
-                        new_date = new_date + timedelta(days=2)
-                    elif dow == 'day before yesterday':
-                        new_date = new_date - timedelta(days=2)
+                    else:
+                        new_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                        if dow == 'yesterday':
+                            new_date = new_date - timedelta(days=1)
+                        elif dow == 'tomorrow':
+                            new_date = new_date + timedelta(days=1)
+                        elif dow == 'day before yesterday':
+                            new_date = new_date - timedelta(days=2)
+                        elif dow == 'day after tomorrow':
+                            new_date = new_date + timedelta(days=2)
 
                 # !year
                 year = [int(CLEAN_NUMBER.sub('', date[key])) for key in ('year', 'year_2', 'year_3', 'year_4', 'year_5', 'year_6') if date.get(key)]
@@ -283,6 +270,15 @@ class Date(object):
     @second.setter
     def second(self, second):
         self.date = self.date.replace(second=second)
+
+    @property
+    def microsecond(self):
+        if self.date != 'infinity':
+            return self.date.microsecond
+
+    @microsecond.setter
+    def microsecond(self, microsecond):
+        self.date = self.date.replace(microsecond=microsecond)
 
     @property
     def weekday(self):

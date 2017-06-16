@@ -4,6 +4,8 @@ import unittest
 from datetime import datetime, date, timedelta
 from math import floor
 
+from freezegun import freeze_time
+
 from timestring import Range
 
 
@@ -17,6 +19,7 @@ def add_years(d, x):
     return date(d.year + x, d.month, d.day)
 
 
+@freeze_time('2017-06-16 19:37:22')
 class RangeTest(unittest.TestCase):
     def assert_range(self, _range, expected_start, expected_end,
                      hours=False, minutes=False, seconds=False):
@@ -37,41 +40,45 @@ class RangeTest(unittest.TestCase):
             self.assertEqual(_range.end.second, expected_end.second)
 
     def test_months(self):
-        start = datetime.now().replace(day=1, month=12)
-        end = datetime(start.year + 1, 1, 1)
         self.assert_range(Range('December'),
-                          start,
-                          end)
+                          datetime(2017, 12, 1, 0, 0, 0),
+                          datetime(2018, 1, 1, 0, 0, 0))
 
-        start = datetime(2017, 1, 1)
-        end = datetime(2017, 2, 1)
-        self.assert_range(Range('January 2017'),
-                          start,
-                          end)
+        self.assert_range(Range('January 2015'),
+                          datetime(2015, 1, 1, 0, 0, 0),
+                          datetime(2015, 2, 1, 0, 0, 0))
 
-        start = datetime.now().replace(day=1)
-        end = add_months(start, 1)
         self.assert_range(Range('this month'),
-                          start,
-                          end)
+                          datetime(2017, 6, 1, 0, 0, 0),
+                          datetime(2017, 7, 1, 0, 0, 0))
 
-        start = datetime.now()
-        end = add_months(start, 2)
-        self.assert_range(Range('next 2 months'),
-                          start,
-                          end)
+        self.assert_range(Range('current month'),
+                          datetime(2017, 6, 1, 0, 0, 0),
+                          datetime(2017, 7, 1, 0, 0, 0))
 
-        start = add_months(datetime.now(), -24)
-        end = datetime.now()
-        self.assert_range(Range('last 24 months'),
-                          start,
-                          end)
+        self.assert_range(Range('next month'),
+                          datetime(2017, 7, 1, 0, 0, 0),
+                          datetime(2017, 8, 1, 0, 0, 0))
 
-        start = datetime.now()
-        end = add_months(start, 1)
         self.assert_range(Range('upcoming month'),
-                          start,
-                          end)
+                          datetime(2017, 7, 1, 0, 0, 0),
+                          datetime(2017, 8, 1, 0, 0, 0))
+
+        self.assert_range(Range('last month'),
+                          datetime(2017, 5, 1, 0, 0, 0),
+                          datetime(2017, 6, 1, 0, 0, 0))
+
+        self.assert_range(Range('previous month'),
+                          datetime(2017, 5, 1, 0, 0, 0),
+                          datetime(2017, 6, 1, 0, 0, 0))
+
+        self.assert_range(Range('next 2 months'),
+                          datetime(2017, 6, 16, 19, 37, 22),
+                          datetime(2017, 8, 16, 19, 37, 22))
+
+        self.assert_range(Range('last 24 months'),
+                          datetime(2015, 6, 16, 19, 37, 22),
+                          datetime(2017, 6, 16, 19, 37, 22))
 
     def test_dates(self):
         self.assert_range(Range('2016 25 December'),
@@ -91,30 +98,30 @@ class RangeTest(unittest.TestCase):
                           end)
 
     def test_week(self):
-        start = datetime.now() + timedelta(days=-7)
-        end = datetime.now()
-        self.assert_range(Range('last week'),
-                          start,
-                          end)
+        self.assert_range(Range('this week'),
+                          datetime(2017, 6, 12, 0, 0, 0),
+                          datetime(2017, 6, 19, 0, 0, 0))
 
-        start = datetime.now()
-        end = datetime.now() + timedelta(days=7)
+        self.assert_range(Range('last week'),
+                          datetime(2017, 6, 5, 0, 0, 0),
+                          datetime(2017, 6, 12, 0, 0, 0))
+
         self.assert_range(Range('next week'),
-                          start,
-                          end)
+                          datetime(2017, 6, 19, 0, 0, 0),
+                          datetime(2017, 6, 26, 0, 0, 0))
 
     def test_year(self):
-        start = add_years(datetime.now(), -1)
-        end = datetime.now()
-        self.assert_range(Range('last year'),
-                          start,
-                          end)
+        self.assert_range(Range('this year'),
+                          datetime(2017, 1, 1, 0, 0, 0),
+                          datetime(2018, 1, 1, 0, 0, 0))
 
-        start = datetime.now()
-        end = add_years(datetime.now(), 1)
+        self.assert_range(Range('last year'),
+                          datetime(2016, 1, 1, 0, 0, 0),
+                          datetime(2017, 1, 1, 0, 0, 0))
+
         self.assert_range(Range('next year'),
-                          start,
-                          end)
+                          datetime(2018, 1, 1, 0, 0, 0),
+                          datetime(2019, 1, 1, 0, 0, 0))
 
     def test_days(self):
         start = datetime.now()

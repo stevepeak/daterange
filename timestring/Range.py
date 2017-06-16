@@ -64,32 +64,29 @@ class Range(object):
                 # postgresql tsrange and tstzranges
                 pgoffset = re.search(r"(\+|\-)\d{2}$", start).group() + " hours"
 
-            # tz info provided
-            # if tz:
-            #     now = now.replace(tzinfo=pytz.timezone(str(tz)))
-
             # Parse
             res = TIMESTRING_RE.search(start)
             if res:
                 group = res.groupdict()
                 if verbose:
                     print(dict(map(lambda a: (a, group.get(a)), filter(lambda a: group.get(a), group))))
+
                 if (group.get('delta') or group.get('delta_2')) is not None:
                     delta = (group.get('delta') or group.get('delta_2')).lower()
 
                     # always start w/ today
-                    start = Date("today", offset=offset, tz=tz)
+                    start = Date("now", offset=offset, tz=tz)
                     # make delta
                     di = "%s %s" % (str(int(group['num'] or 1)), delta)
 
-                    # this           [   x  ]
-                    if group['ref'] == 'this':
+                    # this                             [   x  ]
+                    if group['ref'] in ['this', 'current']:
 
                         if delta.startswith('y'):
                             start = Date(datetime(now.year, 1, 1), offset=offset, tz=tz)
 
                         # month
-                        elif delta.startswith('month'):
+                        elif delta.startswith('mo'):
                             start = Date(datetime(now.year, now.month, 1), offset=offset, tz=tz)
 
                         # week
@@ -102,10 +99,14 @@ class Range(object):
 
                         # hour
                         elif delta.startswith('h'):
-                            start = Date("today", offset=dict(hour=now.hour+1), tz=tz)
+                            start = Date("today", offset=dict(hour=now.hour), tz=tz)
 
-                        # minute, second
-                        elif delta.startswith('m') or delta.startswith('s'):
+                        # minute
+                        elif delta.startswith('m'):
+                            start = Date('now', offset=dict(minute=now.minute), tz=tz)
+
+                        # second
+                        elif delta.startswith('s'):
                             start = Date("now", tz=tz)
 
                         else:
@@ -113,35 +114,65 @@ class Range(object):
 
                         end = start + di
 
-                    #next          x [      ]
-                    elif group['ref'] == 'next' or group['ref'] == 'upcoming':
+                    # "next 2 weeks", "the next hour"   x[     ][     ]
+                    elif group['ref'] in ['next'] and (group['num'] or group['article']):
                         if int(group['num'] or 1) > 1:
                             di = "%s %s" % (str(int(group['num'] or 1)), delta)
                         end = start + di
 
-                    # ago             [     ] x
-                    elif group.get('ago') or group['ref'] == 'last' and int(group['num'] or 1) == 1:
-                        #if group['ref'] == 'last' and int(group['num'] or 1) == 1:
-                        #    start = start - ('1 ' + delta)
+                    # "next week", "upcoming 3 weeks"   (  x  )[      ]
+                    elif group['ref'] in ['next', 'upcoming']:
+                        this = Range('this ' + delta, offset=offset, tz=tz)
+                        start = this.end
+                        end = start + di
+
+                    # ago                               [     ](     )x
+                    elif group['ago']:
+                        end = start - di
+                        start = end - ('1 ' + delta)
+
+                    # "last 2 weeks", "the last hour"   [     ][     ]x
+                    elif group['ref'] in ['last'] and (group['num'] or group['article']):
                         end = start - di
 
-                    # last & no ref   [    x]
-                    else:
-                        # need to include today with this reference
-                        if not (delta.startswith('h') or delta.startswith('m') or delta.startswith('s')):
-                            start = Range('today', offset=offset, tz=tz).end
-                        end = start - di
+                    # "last week", "previous 3 weeks"   [     ](  x  )
+                    elif group['ref'] in ['last', 'previous', '']:
+                        this = Range('this ' + delta, offset=offset, tz=tz)
+                        start = this.start - di
+                        end = this.end - di
+
+                    # "1 year", "10 days" till now
+                    elif group['num']:
+                        end = start - group['main']
+
+                elif group['day_2']:
+                    # Week day: "Monday" etc
+                    start = Date(group['day_2'], offset=offset, tz=tz)
+                    start = start.replace(hour=0, minute=0, second=0)
+                    if group['ref'] in ['last', 'prev', 'previous']:
+                        start -= '1 week'
+                    elif group['ref'] in ['next'] and start.weekday == now.isoweekday():
+                        start += '1 week'
+                    end = start + '1 day'
 
                 elif group.get('month_1'):
-                    # a single month of this yeear
-                    start = Date(start, offset=offset, tz=tz)
-                    start = start.replace(day=1)
+                    if group['year_5']:
+                        start = Date(start, offset=offset, tz=tz)
+                        start = start.replace(hour=0, minute=0, second=0)
+                    else:
+                        # A single month of this, previous or next year
+                        start = Date(group['month_1'], offset=offset, tz=tz)
+                        start = start.replace(hour=0, minute=0, second=0)
+                        if group['ref'] in ['last', 'prev', 'previous', 'past']:
+                            start -= '1 month'
+                        elif group['ref'] in ['next', 'upcoming'] and start.weekday == now.weekday:
+                            start += '1 month'
                     end = start + '1 month'
 
                 elif group.get('year_5'):
                     # a whole year
                     start = Date(start, offset=offset, tz=tz)
-                    start = start.replace(day=1, month=1)
+                    start = start.replace(day=1, month=1, hour=0, minute=0, second=0)
                     end = start + '1 year'
 
                 else:
@@ -338,8 +369,7 @@ class Range(object):
             return self.__contains__(Range(other, tz=self.start.tz))
 
     def cut(self, by, from_start=True):
-        """ Cuts this object from_start to the number requestd
-        returns new instance
+        """Shorten this range by the range requested and return the new range
         """
         s, e = copy(self.start), copy(self.end)
         if from_start:
