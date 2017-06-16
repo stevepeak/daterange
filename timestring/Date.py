@@ -1,12 +1,14 @@
 import re
 import time
 import pytz
+import math
 from copy import copy
 from datetime import datetime, timedelta
 
 from timestring.text2num import text2num
 from timestring import TimestringInvalid
 from timestring.timestring_re import TIMESTRING_RE
+from timestring.utils import get_timezone_time
 
 try:
     unicode
@@ -31,7 +33,7 @@ class Date(object):
             self.date = 'infinity'
 
         elif date == 'now':
-            self.date = datetime.now()
+            self.date = get_timezone_time(tz)#datetime.now()
 
         elif type(date) in (str, unicode) and re.match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+-\d{2}", date):
             self.date = datetime.strptime(date[:-3], "%Y-%m-%d %H:%M:%S.%f") - timedelta(hours=int(date[-3:]))
@@ -55,20 +57,7 @@ class Date(object):
 
             if isinstance(date, dict):
                 # Initial date.
-                new_date = datetime(*time.localtime()[:3])
-                if tz and tz.zone != "UTC":
-                    #
-                    # The purpose here is to adjust what day it is based on the timezeone
-                    #
-                    ts = datetime.now()
-                    # Daylight savings === second Sunday in March and reverts to standard time on the first Sunday in November
-                    # Monday is 0 and Sunday is 6.
-                    # 14 days - dst_start.weekday()
-                    dst_start = datetime(ts.year, 3, 1, 2, 0, 0) + timedelta(13 - datetime(ts.year, 3, 1).weekday())
-                    dst_end = datetime(ts.year, 11, 1, 2, 0, 0) + timedelta(6 - datetime(ts.year, 11, 1).weekday())
-
-                    ts = ts + tz.utcoffset(new_date, is_dst=(dst_start < ts < dst_end))
-                    new_date = datetime(ts.year, ts.month, ts.day)
+                new_date = get_timezone_time(tz)#datetime(*time.localtime()[:3])
 
                 if date.get('unixtime'):
                     new_date = datetime.fromtimestamp(int(date.get('unixtime')))
@@ -129,17 +118,25 @@ class Date(object):
                     iso = dict(monday=1, tuesday=2, wednesday=3, thursday=4, friday=5, saturday=6, sunday=7, mon=1, tue=2, tues=2, wed=3, wedn=3, thu=4, thur=4, fri=5, sat=6, sun=7).get(dow)
                     if iso:
                         # determin which direction
-                        if date.get('ref') not in ('this', 'next'):
+                        ref =  date.get('ref')
+                        if ref in ['next', 'upcoming']:
+                            days = iso - new_date.isoweekday() + (7 if iso <= new_date.isoweekday() else 0)
+                        elif ref in ['last', 'previous', 'prev']:
                             days = iso - new_date.isoweekday() - (7 if iso >= new_date.isoweekday() else 0)
                         else:
                             days = iso - new_date.isoweekday() + (7 if iso < new_date.isoweekday() else 0)
 
                         new_date = new_date + timedelta(days=days)
-
-                    elif dow == 'yesterday':
-                        new_date = new_date - timedelta(days=1)
-                    elif dow == 'tomorrow':
-                        new_date = new_date + timedelta(days=1)
+                    else:
+                        new_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                        if dow == 'yesterday':
+                            new_date = new_date - timedelta(days=1)
+                        elif dow == 'tomorrow':
+                            new_date = new_date + timedelta(days=1)
+                        elif dow == 'day before yesterday':
+                            new_date = new_date - timedelta(days=2)
+                        elif dow == 'day after tomorrow':
+                            new_date = new_date + timedelta(days=2)
 
                 # !year
                 year = [int(CLEAN_NUMBER.sub('', date[key])) for key in ('year', 'year_2', 'year_3', 'year_4', 'year_5', 'year_6') if date.get(key)]
@@ -150,21 +147,22 @@ class Date(object):
                     new_date = new_date.replace(year=year)
 
                 # !month
-                month = [date.get(key) for key in ('month', 'month_1', 'month_2', 'month_3', 'month_4') if date.get(key)]
+                month = [date.get(key) for key in ('month', 'month_1', 'month_2', 'month_3', 'month_4', 'month_5') if date.get(key)]
                 if month:
                     new_date = new_date.replace(day=1)
                     new_date = new_date.replace(month=int(max(month)) if re.match('^\d+$', max(month)) else dict(january=1, february=2, march=3, april=4, june=6, july=7, august=8, september=9, october=10, november=11, december=12, jan=1, feb=2, mar=3, apr=4, may=5, jun=6, jul=7, aug=8, sep=9, sept=9, oct=10, nov=11, dec=12).get(max(month),  new_date.month))
 
                 # !day
-                day = [date.get(key) for key in ('date', 'date_2', 'date_3') if date.get(key)]
+                day = [date.get(key) for key in ('date', 'date_2', 'date_3', 'date_4') if date.get(key)]
                 if day:
                     new_date = new_date.replace(day=int(max(day)))
 
                 # !daytime
                 if date.get('daytime'):
                     if date['daytime'].find('this time') >= 1:
-                        new_date = new_date.replace(hour=datetime(*time.localtime()[:5]).hour,
-                                                    minute=datetime(*time.localtime()[:5]).minute)
+                        current_time = get_timezone_time(tz)
+                        new_date = new_date.replace(hour= current_time.hour,
+                                                    minute=current_time.minute)
                     else:
                         new_date = new_date.replace(hour=dict(morning=9, noon=12, afternoon=15, evening=18, night=21, nighttime=21, midnight=24).get(date.get('daytime'), 12))
                     # No offset because the hour was set.
@@ -173,7 +171,7 @@ class Date(object):
                 # !hour
                 hour = [date.get(key) for key in ('hour', 'hour_2', 'hour_3') if date.get(key)]
                 if hour:
-                    new_date = new_date.replace(hour=int(max(hour)))
+                    new_date = new_date.replace(hour=int(max(hour)), minute=0, second=0)
                     am = [date.get(key) for key in ('am', 'am_1') if date.get(key)]
                     if am and max(am) in ('p', 'pm'):
                         h = int(max(hour))
@@ -201,14 +199,16 @@ class Date(object):
                 self.date = date
 
             elif date is None:
-                self.date = datetime.now()
+                self.date = get_timezone_time(tz)#datetime.now()
 
             else:
                 # Set to the current date Y, M, D, H0, M0, S0
-                self.date = datetime(*time.localtime()[:3])
+                self.date = get_timezone_time(tz) #datetime(*time.localtime()[:3])
+                new_date = new_date.replace(hour=0, minute=0, second=0)
 
-            if tz:
-                self.date = self.date.replace(tzinfo=tz)
+
+            # if tz:
+            #     self.date = self.date.replace(tzinfo=tz)
 
             # end if type(date) is types.DictType: and self.date.hour == 0:
             if offset and isinstance(offset, dict):
@@ -272,6 +272,15 @@ class Date(object):
         self.date = self.date.replace(second=second)
 
     @property
+    def microsecond(self):
+        if self.date != 'infinity':
+            return self.date.microsecond
+
+    @microsecond.setter
+    def microsecond(self, microsecond):
+        self.date = self.date.replace(microsecond=microsecond)
+
+    @property
     def weekday(self):
         if self.date != 'infinity':
             return self.date.isoweekday()
@@ -322,10 +331,15 @@ class Date(object):
                             new.date = new.date + timedelta(days=(365 * i))
                     elif delta.startswith('month'):
                         if (new.date.month + i) > 12:
-                            new.date = new.date.replace(month=(i - (i / 12)),
-                                                        year=(new.date.year + 1 + (i / 12)))
+                            month = (new.date.month + i) % 12
+                            year = math.floor((new.date.month + i)/12)
+                            new.date = new.date.replace(month=month, year=new.date.year+year)
                         elif (new.date.month + i) < 1:
-                            new.date = new.date.replace(month=12, year=(new.date.year - 1))
+                            month = (new.date.month+i) % 12   # current= jan (1), i = -3, month = (1-3)%12 = 10
+                            if month == 0:
+                                month = new.date.month
+                            year = int((-1*(new.date.month+i))/12) + 1    #1 is added to fix 0 case
+                            new.date = new.date.replace(month=month, year=(new.date.year - year))
                         else:
                             new.date = new.date.replace(month=(new.date.month + i))
                     elif delta.startswith('q'):
@@ -455,7 +469,7 @@ class Date(object):
 
     def __ne__(self, other):
         return not self.__eq__(other)
-        
+
     def format(self, format_string='%x %X'):
         if self.date != 'infinity':
             return self.date.strftime(format_string)
