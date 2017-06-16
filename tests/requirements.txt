@@ -4,3 +4,4 @@ nose-cov
 codecov
 ddt
 six
+freezegun

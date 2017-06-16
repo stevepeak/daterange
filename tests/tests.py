@@ -158,9 +158,7 @@ class timestringTests(unittest.TestCase):
 
     def test_this(self):
         now = datetime.now()
-        #
-        # this year
-        #
+
         year = Range('this year')
         self.assertEqual(year.start.year, now.year)
         self.assertEqual(year.start.month, 1)
@@ -172,25 +170,21 @@ class timestringTests(unittest.TestCase):
         self.assertEqual(year.end.day, 1)
         self.assertEqual(year.end.hour, 0)
         self.assertEqual(year.end.minute, 0)
+        self.assertTrue(Date('today') in year)
 
-        #
-        # 1 year (from now)
-        #
-        year = Range('1 year')
-        self.assertEqual(year.start.year, (now + timedelta(days=1)).year-1)
-        self.assertEqual(year.start.month, (now + timedelta(days=1)).month)
-        self.assertEqual(year.start.day, (now + timedelta(days=1)).day)
-        self.assertEqual(year.start.hour, 0)
-        self.assertEqual(year.start.minute, 0)
-        self.assertEqual(year.end.year, (now + timedelta(days=1)).year)
-        self.assertEqual(year.end.month, (now + timedelta(days=1)).month)
-        self.assertEqual(year.end.day, (now + timedelta(days=1)).day)
-        self.assertEqual(year.end.hour, 0)
-        self.assertEqual(year.end.minute, 0)
+        # 1 year (till now)
+        range = Range('1 year')
+        self.assertEqual(range.start.year, now.year - 1)
+        self.assertEqual(range.start.month, now.month)
+        self.assertEqual(range.start.day, now.day)
+        self.assertEqual(range.start.hour, now.hour)
+        self.assertEqual(range.start.minute, now.minute)
+        self.assertEqual(range.end.year, now.year)
+        self.assertEqual(range.end.month, now.month)
+        self.assertEqual(range.end.day, now.day)
+        self.assertEqual(range.end.hour, now.hour)
+        self.assertEqual(range.end.minute, now.minute)
 
-        #
-        # this month
-        #
         month = Range('this month')
         self.assertEqual(month.start.year, now.year)
         self.assertEqual(month.start.month, now.month)
@@ -203,9 +197,6 @@ class timestringTests(unittest.TestCase):
         self.assertEqual(month.end.hour, 0)
         self.assertEqual(month.end.minute, 0)
 
-        #
-        # this month w/ offset
-        #
         mo = Range('this month', offset=dict(hour=6))
         self.assertEqual(mo.start.year, now.year)
         self.assertEqual(mo.start.month, now.month)
@@ -229,17 +220,17 @@ class timestringTests(unittest.TestCase):
         self.assertEqual(len(Range('10s')), 10)
 
     def test_dow(self):
-        #
-        # DOW
-        #
+        now = datetime.now()
+        hour_in_seconds = 24 * 60 * 60
         for x, day in enumerate(('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'Satruday', 'sunday')):
             d, r = Date(day), Range(day)
-            self.assertEqual(d.hour, 0)
+            self.assertLess(d.date - now, timedelta(7))
             self.assertEqual(d.weekday, 1 + x)
-            # length is 1 day in seconds
-            self.assertEqual(len(r), 86400)
+            self.assertEqual(len(r), hour_in_seconds)
             self.assertEqual(r.start.hour, 0)
+            self.assertEqual(r.start.minute, 0)
             self.assertEqual(r.end.hour, 0)
+            self.assertEqual(r.end.minute, 0)
             self.assertEqual(r.end.weekday, 1 if x+1 == 7 else (2+x))
 
     def test_offset(self):
@@ -258,15 +249,13 @@ class timestringTests(unittest.TestCase):
         #
         # Lengths
         #
-        self.assertEqual(len(Range("next 10 weeks")), 5443200)
-        self.assertEqual(len(Range("this week")), 604800)
-        self.assertEqual(len(Range("3 weeks")), 1814400)
-        self.assertEqual(len(Range('yesterday')), 86400)
+        week = 7 * 24 * 60 * 60
+        self.assertEqual(len(Range("next 10 weeks")), 10 * week)
+        self.assertEqual(len(Range("this week")), week)
+        self.assertEqual(len(Range("3 weeks")), 3 * week)
+        self.assertEqual(len(Range('yesterday')), 24 * 60 * 60)
 
     def test_in(self):
-        #
-        # in
-        #
         self.assertTrue(Date('yesterday') in Range("last 7 days"))
         self.assertTrue(Date('today') in Range('this month'))
         self.assertTrue(Date('today') in Range('this month'))
@@ -283,12 +272,24 @@ class timestringTests(unittest.TestCase):
         self.assertEqual(Date('today', tz="US/Central").tz.zone, 'US/Central')
 
     def test_cut(self):
-        #
-        # Cut
-        #
-        self.assertTrue(Range('from january 10th 2010 to february 2nd 2010').cut('10 days') == Range('from january 10th 2010 to jan 20th 2010'))
-        self.assertTrue(Date("jan 10") + '1 day' == Date("jan 11"))
-        self.assertTrue(Date("jan 10") - '5 day' == Date("jan 5"))
+        range_1 = Range('from january 10th 2010 to february 2nd 2010').cut('10 days')
+        range_1.start.microsecond = 1
+        range_1.end.microsecond = 1
+        range_2 = Range('from january 10th 2010 to jan 20th 2010')
+        range_2.start.microsecond = 1
+        range_2.end.microsecond = 1
+        self.assertEqual(range_1, range_2)
+
+    def test_add_subtract(self):
+        date_1 = Date('jan 10')
+        date_1.microsecond = 1
+        date_2 = Date('jan 11')
+        date_2.microsecond = 1
+        self.assertEqual(date_1 + '1 day', date_2)
+
+        date_2 = Date('jan 5')
+        date_2.microsecond = 1
+        self.assertEqual(Date(date_1) - '5 days', date_2)
 
     def test_compare(self):
         self.assertFalse(Range('10 days') == Date('yestserday'))
@@ -300,27 +301,35 @@ class timestringTests(unittest.TestCase):
     def test_last(self):
         now = datetime.now()
 
-        #
-        # last year
-        #
         year = Range('last year')
         self.assertEqual(year.start.year, now.year - 1)
-        self.assertEqual(year.start.month, now.month)
-        self.assertEqual(year.start.day, now.day)
+        self.assertEqual(year.start.month, 1)
+        self.assertEqual(year.start.day, 1)
         self.assertEqual(year.start.hour, 0)
         self.assertEqual(year.start.minute, 0)
         self.assertEqual(year.end.year, now.year)
-        self.assertEqual(year.end.month, now.month)
-        self.assertEqual(year.end.day, now.day)
+        self.assertEqual(year.end.month, 1)
+        self.assertEqual(year.end.day, 1)
         self.assertEqual(year.end.hour, 0)
         self.assertEqual(year.end.minute, 0)
-        self.assertTrue(Date('today') in year)
+        self.assertTrue(Date('today') not in year)
 
-        self.assertTrue(Date('last tuesday') in Range('8 days'))
-        self.assertTrue(Date('monday') in Range('8 days'))
-        self.assertTrue(Date('last fri') in Range('8 days'))
-        self.assertEqual(Range('1 year ago'), Range('last year'))
-        self.assertEqual(Range('year ago'), Range('last year'))
+        self.assertTrue(Date('last tuesday') in Range('last 14 days'))
+        self.assertTrue(Date('tuesday') in Range('next 7 days'))
+        self.assertTrue(Date('tuesday') in Range('next 7 days'))
+        self.assertTrue(Date('next tuesday') in Range('next 14 days'))
+
+    def test_ago(self):
+        now = datetime.now().replace(microsecond=0)
+        range = Range('1 year ago')
+        self.assertEqual(range.start.date.replace(microsecond=0), now.replace(year=now.year - 2))
+        self.assertEqual(range.end.date.replace(microsecond=0), now.replace(year=now.year - 1))
+
+        range = Range('2 weeks ago')
+        week = timedelta(days=7)
+        self.assertEqual(range.start.date.replace(microsecond=0), now - 3 * week)
+        self.assertEqual(range.end.date.replace(microsecond=0), now - 2 * week)
+
 
     def test_psql_infinity(self):
         d = Date('infinity')
@@ -370,6 +379,7 @@ class timestringTests(unittest.TestCase):
         d.year = 2013
         d.minute = 40
         d.second = 14
+        d.microsecond = 10001
 
         self.assertEqual(d.year, 2013)
         self.assertEqual(d.month, 4)
@@ -377,8 +387,7 @@ class timestringTests(unittest.TestCase):
         self.assertEqual(d.hour, 5)
         self.assertEqual(d.minute, 40)
         self.assertEqual(d.second, 14)
-
-        self.assertEqual(str(d.date), "2013-04-15 05:40:14")
+        self.assertEqual(str(d.date), "2013-04-15 05:40:14.010001")
 
     def test_parse(self):
         self.assertEqual(parse('tuesday at 10pm')['hour'], 22)
