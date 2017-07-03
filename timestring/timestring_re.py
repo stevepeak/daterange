@@ -27,7 +27,7 @@ TIMESTRING_RE = re.compile(re.sub('[\t\n\s]', '', re.sub('(\(\?\#[^\)]+\))', '',
                         |
 
                         (?# =-=-=-= Matches Days =-=-=-= )
-                        (?P<day_2>yesterday|today|now|tomorrow|mondays?|tuesdays?|wednesdays?|thursdays?|fridays?|saturdays?|sundays?|mon|tues?|wedn?|thur?|fri|sat|sun)
+                        (?P<day_2>yesterday|today|now|tomorrow|mondays?|tuesdays?|wednesdays?|thursdays?|fridays?|saturdays?|sundays?|^mon$|tues?|wedn?|thur?|fri|^sat$|^sun$)
 
                         |
 
