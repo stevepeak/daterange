@@ -6,6 +6,7 @@ from datetime import datetime
 from timestring.Date import Date
 from timestring import TimestringInvalid
 from timestring.timestring_re import TIMESTRING_RE
+from timestring.utils import get_timezone_time
 
 try:
     unicode
@@ -20,6 +21,8 @@ class Range(object):
         """
         self._dates = []
         pgoffset = None
+        if tz:
+            tz = pytz.timezone(str(tz))
 
         if start is None:
             raise TimestringInvalid("Range object requires a start valie")
@@ -53,7 +56,8 @@ class Range(object):
             self._dates = (Date(start), Date(end))
 
         else:
-            now = datetime.now()
+
+            now = get_timezone_time(tz)#datetime.now()
             # no tz info but offset provided, we are UTC so convert
 
             if re.search(r"(\+|\-)\d{2}$", start):
@@ -61,8 +65,8 @@ class Range(object):
                 pgoffset = re.search(r"(\+|\-)\d{2}$", start).group() + " hours"
 
             # tz info provided
-            if tz:
-                now = now.replace(tzinfo=pytz.timezone(str(tz)))
+            # if tz:
+            #     now = now.replace(tzinfo=pytz.timezone(str(tz)))
 
             # Parse
             res = TIMESTRING_RE.search(start)
@@ -75,7 +79,6 @@ class Range(object):
 
                     # always start w/ today
                     start = Date("today", offset=offset, tz=tz)
-
                     # make delta
                     di = "%s %s" % (str(int(group['num'] or 1)), delta)
 
@@ -111,9 +114,9 @@ class Range(object):
                         end = start + di
 
                     #next          x [      ]
-                    elif group['ref'] == 'next':
+                    elif group['ref'] == 'next' or group['ref'] == 'upcoming':
                         if int(group['num'] or 1) > 1:
-                            di = "%s %s" % (str(int(group['num'] or 1) - 1), delta)
+                            di = "%s %s" % (str(int(group['num'] or 1)), delta)
                         end = start + di
 
                     # ago             [     ] x
@@ -127,7 +130,7 @@ class Range(object):
                         # need to include today with this reference
                         if not (delta.startswith('h') or delta.startswith('m') or delta.startswith('s')):
                             start = Range('today', offset=offset, tz=tz).end
-                        end = start - di                    
+                        end = start - di
 
                 elif group.get('month_1'):
                     # a single month of this yeear
@@ -157,7 +160,7 @@ class Range(object):
             if start > end:
                 # flip them if this is so
                 start, end = copy(end), copy(start)
-            
+
             if pgoffset:
                 start = start - pgoffset
                 if end != 'infinity':
@@ -276,7 +279,7 @@ class Range(object):
             end = self.end.replace(tzinfo=other.end.tz) if other.end.tz and self.end.tz is None else self.end
 
             if start == other.start and end == other.end:
-                return 0 
+                return 0
             elif start < other.start:
                 return -1
             else:
@@ -295,11 +298,11 @@ class Range(object):
             * [---{-}---] => True else False
         """
         if isinstance(other, Date):
-            
+
             # ~ .... |
             if self.start == 'infinity' and self.end >= other:
                 return True
-            
+
             # | .... ~
             elif self.end == 'infinity' and self.start <= other:
                 return True
