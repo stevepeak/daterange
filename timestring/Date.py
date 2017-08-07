@@ -89,7 +89,7 @@ class Date(object):
                             new_date = new_date - timedelta(days=(365*i))
                     elif delta.startswith('month'):
                         try:
-                            new_date = new_date.replace(month=(new_date.month - i))
+                            new_date = new_date.replace(month=(new_date.month - 2))
                         # day is out of range for month
                         except ValueError:
                             new_date = new_date - timedelta(days=(30*i))
