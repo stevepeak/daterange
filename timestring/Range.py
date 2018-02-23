@@ -22,7 +22,7 @@ class Range(object):
         pgoffset = None
 
         if start is None:
-            raise TimestringInvalid("Range object requires a start valie")
+            raise TimestringInvalid("Range object requires a start value")
 
         if not isinstance(start, (Date, datetime)):
             start = str(start)
