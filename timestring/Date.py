@@ -70,17 +70,15 @@ class Date(object):
                     ts = ts + tz.utcoffset(new_date, is_dst=(dst_start < ts < dst_end))
                     new_date = datetime(ts.year, ts.month, ts.day)
 
-
                 if date.get('filetime'):
                     value = int(date.get('filetime'))
                     seconds = value / 10000000
                     epoch = seconds - 11644473600
                     dt = datetime(2000, 1, 1, 0, 0, 0)
                     new_date = dt.fromtimestamp(epoch)
-                
+
                 elif date.get('unixtime'):
                     new_date = datetime.fromtimestamp(int(date.get('unixtime')))
-
 
                 # !number of (days|...) (ago)?
                 elif date.get('num') and (date.get('delta') or date.get('delta_2')):
