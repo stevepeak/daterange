@@ -474,9 +474,3 @@ class Date(object):
             return time.mktime(self.date.timetuple())
         else:
             return -1
-
-    def to_filetime(self):
-        if self.date != 'infinity':
-            return time.mktime(self.date.timetuple())
-        else:
-            return -1
